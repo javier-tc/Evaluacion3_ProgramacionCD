@@ -87,3 +87,8 @@ def get_annual_averages() -> list:
 
 def get_etl_status() -> dict:
     return _get("/analytics/etl-status")
+
+
+def get_data_quality() -> dict:
+    result = _get("/analytics/data-quality")
+    return result if isinstance(result, dict) else {}

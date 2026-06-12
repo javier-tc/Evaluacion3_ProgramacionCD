@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from api.dependencies import get_db
 from api.schemas.responses import (
     CorrelationRecord,
+    DataQualityResponse,
     EtlStatusResponse,
     TopPollutionDay,
     TrendRecord,
@@ -11,6 +12,7 @@ from api.schemas.responses import (
 from api.services.queries import (
     get_annual_averages,
     get_correlations,
+    get_data_quality,
     get_etl_status,
     get_top_pollution_days,
     get_trends,
@@ -46,3 +48,8 @@ def annual_averages(db: Session = Depends(get_db)):
 @router.get("/etl-status", response_model=EtlStatusResponse)
 def etl_status(db: Session = Depends(get_db)):
     return get_etl_status(db)
+
+
+@router.get("/data-quality", response_model=DataQualityResponse)
+def data_quality(db: Session = Depends(get_db)):
+    return get_data_quality(db)

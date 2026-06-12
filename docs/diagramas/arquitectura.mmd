@@ -1,0 +1,22 @@
+flowchart TB
+    subgraph sources [Fuentes]
+        CSV[CSV Contaminantes]
+        API[Open-Meteo]
+    end
+    subgraph etl_layer [ETL]
+        EX[extract]
+        TR[transform]
+        VAL[validation]
+        LD[load]
+    end
+    subgraph storage [Almacenamiento]
+        PG[(PostgreSQL)]
+    end
+    subgraph services [Servicios]
+        API2[FastAPI]
+        DASH[Dash Plotly]
+    end
+    CSV --> EX
+    API --> EX
+    EX --> TR --> VAL --> LD --> PG
+    PG --> API2 --> DASH

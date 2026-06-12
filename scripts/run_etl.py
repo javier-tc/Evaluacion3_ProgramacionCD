@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """orquestador principal del pipeline etl."""
 
+import json
 import sys
 import time
 import uuid
@@ -21,16 +22,24 @@ from etl.validation.validator import validate_datasets
 from scripts.migrate import migrate
 
 
-def _log_etl_stage(run_id: str, stage: str, status: str, records: int = 0,
-                   error: str | None = None, duration: float | None = None):
+def _log_etl_stage(
+    run_id: str,
+    stage: str,
+    status: str,
+    records: int = 0,
+    error: str | None = None,
+    duration: float | None = None,
+    metadata: dict | None = None,
+):
     Session = get_session_factory()
+    msg = json.dumps(metadata) if metadata else error
     with Session() as session:
         session.add(EtlExecutionLog(
             run_id=run_id,
             stage=stage,
             status=status,
             records_count=records,
-            error_message=error,
+            error_message=msg,
             duration_seconds=duration,
             started_at=datetime.now(),
             finished_at=datetime.now(),
@@ -51,8 +60,9 @@ def run_pipeline() -> None:
 
         t_extract = time.time()
         pollution_dfs, weather_raw, _ = run_extraction()
+        raw_pollution_count = sum(len(d) for d in pollution_dfs.values())
         _log_etl_stage(run_id, "extract", "success",
-                       sum(len(d) for d in pollution_dfs.values()) + len(weather_raw),
+                       raw_pollution_count + len(weather_raw),
                        duration=time.time() - t_extract)
 
         t_transform = time.time()
@@ -70,8 +80,18 @@ def run_pipeline() -> None:
 
         t_validate = time.time()
         report = validate_datasets(pollution_df, weather_df)
-        _log_etl_stage(run_id, "validate", "success" if report["overall_success"] else "warning",
-                       len(pollution_df), duration=time.time() - t_validate)
+        validate_metadata = {
+            "duplicates_removed": report["pollution"]["duplicates"],
+            "missing_values_estimated": raw_pollution_count - len(pollution_df),
+            "valid_records": report["pollution"]["pydantic_valid"],
+        }
+        _log_etl_stage(
+            run_id, "validate",
+            "success" if report["overall_success"] else "warning",
+            len(pollution_df),
+            duration=time.time() - t_validate,
+            metadata=validate_metadata,
+        )
 
         t_load = time.time()
         total = load_all_data(

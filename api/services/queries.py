@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 
 import numpy as np
@@ -153,6 +154,72 @@ def get_etl_status(db: Session) -> dict:
         "records_processed": last.records_count,
         "duration_seconds": last.duration_seconds,
         "error_message": last.error_message,
+    }
+
+
+def _parse_validate_metadata(msg: str | None) -> dict:
+    if not msg:
+        return {}
+    try:
+        return json.loads(msg)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+def get_data_quality(db: Session) -> dict:
+    total = db.scalar(select(func.count()).select_from(PollutionMeasurement)) or 0
+    valid = db.scalar(
+        select(func.count()).select_from(PollutionMeasurement).where(
+            PollutionMeasurement.quality_status == "validated"
+        )
+    ) or 0
+    preliminary = db.scalar(
+        select(func.count()).select_from(PollutionMeasurement).where(
+            PollutionMeasurement.quality_status == "preliminary"
+        )
+    ) or 0
+    non_validated = db.scalar(
+        select(func.count()).select_from(PollutionMeasurement).where(
+            PollutionMeasurement.quality_status == "non_validated"
+        )
+    ) or 0
+
+    validate_log = db.scalars(
+        select(EtlExecutionLog)
+        .where(EtlExecutionLog.stage == "validate")
+        .order_by(desc(EtlExecutionLog.started_at))
+        .limit(1)
+    ).first()
+
+    pipeline_log = db.scalars(
+        select(EtlExecutionLog)
+        .where(EtlExecutionLog.stage == "pipeline")
+        .order_by(desc(EtlExecutionLog.started_at))
+        .limit(1)
+    ).first()
+
+    failed_count = db.scalar(
+        select(func.count()).select_from(EtlExecutionLog).where(
+            EtlExecutionLog.status == "failed"
+        )
+    ) or 0
+
+    meta = _parse_validate_metadata(
+        validate_log.error_message if validate_log else None
+    )
+
+    return {
+        "total_records": total,
+        "valid_records": valid,
+        "preliminary_records": preliminary,
+        "non_validated_records": non_validated,
+        "missing_values_estimated": meta.get("missing_values_estimated", 0),
+        "duplicates_removed": meta.get("duplicates_removed", 0),
+        "last_validation": validate_log.started_at if validate_log else None,
+        "etl_last_run": pipeline_log.started_at if pipeline_log else None,
+        "etl_records_processed": pipeline_log.records_count if pipeline_log else 0,
+        "etl_errors": failed_count,
+        "etl_duration_seconds": pipeline_log.duration_seconds if pipeline_log else None,
     }
 
 

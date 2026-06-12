@@ -1,0 +1,18 @@
+erDiagram
+    pollution_measurements ||--o{ daily_metrics : agrega
+    pollution_measurements {
+        int id PK
+        timestamp measured_at
+        varchar pollutant
+        float value
+    }
+    weather_measurements {
+        int id PK
+        date date
+        float temp_max
+    }
+    daily_metrics {
+        int id PK
+        date date
+        float avg_value
+    }

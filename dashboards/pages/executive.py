@@ -1,20 +1,17 @@
 from datetime import date
 
 import dash_bootstrap_components as dbc
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc, html
 
-from dashboards.api_client import (
-    PLOTLY_CONFIG,
-    get_annual_averages,
-    get_daily,
-    get_monthly,
-    get_top_days,
-    get_trends,
-)
+from dashboards.api_client import PLOTLY_CONFIG, get_annual_averages, get_monthly
+from dashboards.utils.constants import POLLUTANTS
+from dashboards.utils.normalization import normalize_monthly
+from dashboards.utils.transforms import display_pollutant, display_unit
 
-POLLUTANTS = ["CO", "MP10", "MP25", "NO2", "O3"]
+KPI_ORDER = ["MP25", "MP10", "NO2", "O3", "CO"]
 
 
 def layout():
@@ -26,100 +23,97 @@ def layout():
                 start_date=date(2025, 6, 1),
                 end_date=date(2026, 6, 1),
                 display_format="DD/MM/YYYY",
-            ), md=6),
-            dbc.Col(dcc.Dropdown(
-                id="exec-pollutant",
-                options=[{"label": p, "value": p} for p in POLLUTANTS],
-                value="MP25",
-                clearable=True,
-                placeholder="Todos los contaminantes",
-            ), md=6),
+            ), md=8),
         ], className="mb-4"),
+        html.H4("Indicadores Anuales", className="mb-3"),
         dbc.Row(id="exec-kpis", className="mb-4"),
         dbc.Row([
-            dbc.Col(dcc.Graph(id="exec-timeline", config=PLOTLY_CONFIG), md=8),
-            dbc.Col(dcc.Graph(id="exec-bar-compare", config=PLOTLY_CONFIG), md=4),
+            dbc.Col(dcc.Graph(id="exec-ranking", config=PLOTLY_CONFIG), md=5),
+            dbc.Col(dcc.Graph(id="exec-monthly-norm", config=PLOTLY_CONFIG), md=7),
         ]),
-        dbc.Row([
-            dbc.Col(dcc.Graph(id="exec-monthly", config=PLOTLY_CONFIG), md=6),
-            dbc.Col(dcc.Graph(id="exec-top-days", config=PLOTLY_CONFIG), md=6),
-        ], className="mt-3"),
-        dbc.Row([
-            dbc.Col(dcc.Graph(id="exec-trends", config=PLOTLY_CONFIG), md=12),
-        ], className="mt-3"),
     ], fluid=True)
 
 
 @callback(
     Output("exec-kpis", "children"),
-    Output("exec-timeline", "figure"),
-    Output("exec-bar-compare", "figure"),
-    Output("exec-monthly", "figure"),
-    Output("exec-top-days", "figure"),
-    Output("exec-trends", "figure"),
+    Output("exec-ranking", "figure"),
+    Output("exec-monthly-norm", "figure"),
     Input("exec-date-range", "start_date"),
     Input("exec-date-range", "end_date"),
-    Input("exec-pollutant", "value"),
 )
-def update_executive(start_date, end_date, pollutant):
-    start = date.fromisoformat(start_date) if start_date else None
-    end = date.fromisoformat(end_date) if end_date else None
-
+def update_executive(start_date, end_date):
     annual = get_annual_averages()
-    daily = get_daily(pollutant, start, end)
-    monthly = get_monthly(pollutant)
-    top = get_top_days(pollutant, 10)
-    trends = get_trends()
+    monthly = get_monthly()
+
+    annual_map = {a["pollutant"]: a for a in annual}
 
     kpis = []
-    for item in annual:
-        kpis.append(dbc.Col(html.Div([
-            html.Div(f"{item['annual_avg']:.2f}", className="kpi-value"),
-            html.Div(f"Promedio anual {item['pollutant']} ({item['unit']})", className="kpi-label"),
-        ], className="kpi-card"), md=2))
+    for pol in KPI_ORDER:
+        item = annual_map.get(pol)
+        if item:
+            kpis.append(dbc.Col(html.Div([
+                html.Div(f"{item['annual_avg']:.2f}", className="kpi-value"),
+                html.Div(
+                    f"Promedio anual {display_pollutant(pol)} ({display_unit(item['unit'])})",
+                    className="kpi-label",
+                ),
+            ], className="kpi-card"), md=2, xs=6))
+        else:
+            kpis.append(dbc.Col(html.Div([
+                html.Div("N/A", className="kpi-value"),
+                html.Div(f"Promedio anual {display_pollutant(pol)}", className="kpi-label"),
+            ], className="kpi-card"), md=2, xs=6))
 
     if annual:
-        predominant = max(annual, key=lambda x: x["annual_avg"])
-        kpis.append(dbc.Col(html.Div([
-            html.Div(predominant["pollutant"], className="kpi-value"),
-            html.Div("Contaminante predominante", className="kpi-label"),
-        ], className="kpi-card"), md=2))
-
-    fig_timeline = px.line(
-        daily, x="date", y="avg_value", color="pollutant" if not pollutant else None,
-        title="Evolucion temporal de contaminantes",
-        labels={"avg_value": "Concentracion promedio", "date": "Fecha"},
-    ) if daily else go.Figure().update_layout(title="Sin datos")
-
-    fig_bar = px.bar(
-        annual, x="pollutant", y="annual_avg", color="pollutant",
-        title="Comparacion promedios anuales",
-        labels={"annual_avg": "Promedio anual", "pollutant": "Contaminante"},
-    ) if annual else go.Figure().update_layout(title="Sin datos")
-
-    fig_monthly = px.bar(
-        monthly, x="year_month", y="avg_value", color="pollutant" if not pollutant else None,
-        title="Evolucion mensual",
-        labels={"avg_value": "Promedio mensual", "year_month": "Mes"},
-    ) if monthly else go.Figure().update_layout(title="Sin datos")
-
-    fig_top = px.bar(
-        top, x="date", y="value", color="pollutant",
-        title="Dias con mayor contaminacion",
-        labels={"value": "Concentracion maxima", "date": "Fecha"},
-    ) if top else go.Figure().update_layout(title="Sin datos")
-
-    if trends:
-        fig_trends = go.Figure()
-        for t in trends:
-            direction = "↑" if t["trend_direction"] == "increasing" else "↓"
-            fig_trends.add_trace(go.Bar(
-                x=[t["pollutant"]],
-                y=[t["slope"]],
-                name=f"{t['pollutant']} {direction} (R²={t['r_squared']:.3f})",
-            ))
-        fig_trends.update_layout(title="Tendencias por contaminante (pendiente)", barmode="group")
+        rank_df = pd.DataFrame(annual)
+        rank_df["label"] = rank_df.apply(
+            lambda r: f"{display_pollutant(r['pollutant'])} ({display_unit(r['unit'])})", axis=1
+        )
+        fig_rank = px.bar(
+            rank_df.sort_values("annual_avg", ascending=True),
+            x="annual_avg",
+            y="label",
+            orientation="h",
+            title="Ranking de contaminantes (valores reales)",
+            labels={"annual_avg": "Promedio anual", "label": "Contaminante"},
+            text="annual_avg",
+        )
+        fig_rank.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+        fig_rank.add_annotation(
+            text="Cada barra en su unidad física (ppm, μg/m³ o ppb)",
+            xref="paper", yref="paper", x=0, y=-0.15, showarrow=False,
+            font=dict(size=11),
+        )
     else:
-        fig_trends = go.Figure().update_layout(title="Sin datos de tendencias")
+        fig_rank = go.Figure().update_layout(title="Sin datos de ranking")
 
-    return kpis, fig_timeline, fig_bar, fig_monthly, fig_top, fig_trends
+    if monthly:
+        mdf = pd.DataFrame(monthly)
+        if start_date:
+            mdf = mdf[mdf["year_month"] >= start_date[:7]]
+        if end_date:
+            mdf = mdf[mdf["year_month"] <= end_date[:7]]
+        mdf["pollutant_label"] = mdf["pollutant"].map(display_pollutant)
+        norm_df = normalize_monthly(mdf)
+        fig_norm = px.line(
+            norm_df,
+            x="year_month",
+            y="normalized",
+            color="pollutant_label",
+            title="Evolución mensual normalizada (min-max por contaminante)",
+            labels={
+                "normalized": "Índice normalizado (0-1)",
+                "year_month": "Mes",
+                "pollutant_label": "Contaminante",
+            },
+            markers=True,
+        )
+        fig_norm.add_annotation(
+            text="Normalización min-max solo para comparar tendencias, no magnitudes absolutas",
+            xref="paper", yref="paper", x=0, y=-0.12, showarrow=False,
+            font=dict(size=11),
+        )
+    else:
+        fig_norm = go.Figure().update_layout(title="Sin datos mensuales")
+
+    return kpis, fig_rank, fig_norm

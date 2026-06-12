@@ -64,3 +64,21 @@ Promedios anuales por contaminante.
 ### GET /analytics/etl-status
 
 Estado de la última ejecución del pipeline ETL.
+
+### GET /analytics/data-quality
+
+Métricas de calidad de datos y última ejecución ETL:
+
+| Campo | Descripción |
+|-------|-------------|
+| total_records | Total mediciones en BD |
+| valid_records | Registros con status validated |
+| preliminary_records | Registros preliminares |
+| non_validated_records | Registros no validados |
+| missing_values_estimated | Faltantes estimados en último ETL |
+| duplicates_removed | Duplicados eliminados |
+| last_validation | Fecha última validación |
+| etl_last_run | Fecha último pipeline |
+| etl_records_processed | Registros procesados |
+| etl_errors | Conteo de ejecuciones fallidas |
+| etl_duration_seconds | Duración último pipeline |

@@ -1,0 +1,5 @@
+flowchart LR
+    E1[Extract CSV] --> T1[Transform]
+    E2[Extract API] --> T1
+    T1 --> V1[Validate]
+    V1 --> L1[Load PostgreSQL]

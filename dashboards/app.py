@@ -4,7 +4,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, callback, dcc, html
 
-from dashboards.pages import analytical, executive, operational
+from dashboards.pages import analytical, executive, operational, presentation
 
 app = dash.Dash(
     __name__,
@@ -15,8 +15,9 @@ app = dash.Dash(
 
 navbar = dbc.NavbarSimple(
     children=[
-        dbc.NavItem(dbc.NavLink("Ejecutivo", href="/", active="exact")),
-        dbc.NavItem(dbc.NavLink("Analitico", href="/analitico", active="exact")),
+        dbc.NavItem(dbc.NavLink("Presentación", href="/presentacion", active="exact")),
+        dbc.NavItem(dbc.NavLink("Ejecutivo", href="/ejecutivo", active="exact")),
+        dbc.NavItem(dbc.NavLink("Analítico", href="/analitico", active="exact")),
         dbc.NavItem(dbc.NavLink("Operacional", href="/operacional", active="exact")),
     ],
     brand="Monitoreo Calidad del Aire - Santiago",
@@ -34,14 +35,18 @@ app.layout = html.Div([
 
 @callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(pathname):
+    if pathname == "/presentacion" or pathname == "/":
+        return presentation.layout()
+    if pathname == "/ejecutivo":
+        return executive.layout()
     if pathname == "/analitico":
         return analytical.layout()
     if pathname == "/operacional":
         return operational.layout()
-    return executive.layout()
+    return presentation.layout()
 
 
 if __name__ == "__main__":
     host = os.getenv("DASHBOARD_HOST", "0.0.0.0")
     port = int(os.getenv("DASHBOARD_PORT", "8050"))
-    app.run_server(host=host, port=port, debug=False)
+    app.run(host=host, port=port, debug=False)

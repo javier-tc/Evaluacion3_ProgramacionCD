@@ -113,3 +113,25 @@ def test_etl_status(mock_get, client):
     }
     response = client.get("/analytics/etl-status")
     assert response.status_code == 200
+
+
+@patch("api.routers.analytics.get_data_quality")
+def test_data_quality(mock_get, client):
+    mock_get.return_value = {
+        "total_records": 100,
+        "valid_records": 80,
+        "preliminary_records": 15,
+        "non_validated_records": 5,
+        "missing_values_estimated": 3,
+        "duplicates_removed": 2,
+        "last_validation": None,
+        "etl_last_run": None,
+        "etl_records_processed": 100,
+        "etl_errors": 0,
+        "etl_duration_seconds": 12.5,
+    }
+    response = client.get("/analytics/data-quality")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_records"] == 100
+    assert data["valid_records"] == 80

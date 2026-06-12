@@ -87,6 +87,20 @@ class EtlStatusResponse(BaseModel):
     error_message: str | None = None
 
 
+class DataQualityResponse(BaseModel):
+    total_records: int
+    valid_records: int
+    preliminary_records: int
+    non_validated_records: int
+    missing_values_estimated: int
+    duplicates_removed: int
+    last_validation: datetime | None
+    etl_last_run: datetime | None
+    etl_records_processed: int
+    etl_errors: int
+    etl_duration_seconds: float | None
+
+
 class PaginatedResponse(BaseModel):
     total: int
     items: list
