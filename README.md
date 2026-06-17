@@ -2,6 +2,13 @@
 
 Solución completa de Ciencia de Datos que integra datos ambientales y meteorológicos mediante un pipeline ETL automatizado, almacenamiento en PostgreSQL, API REST y dashboards interactivos Dash + Plotly.
 
+## Integrantes
+
+| GitHub | Aportes principales |
+|--------|---------------------|
+| [@javier-tc](https://github.com/javier-tc) | Desarrollo del pipeline ETL, API REST, dashboard, containerización Docker y documentación técnica |
+| [@roz-ctrl](https://github.com/roz-ctrl) | Limpieza y reorganización del repositorio, documentación del equipo y flujo de colaboración Git |
+
 ## Inicio rápido
 
 ```bash
