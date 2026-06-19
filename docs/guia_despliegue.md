@@ -9,11 +9,35 @@
 
 ## Despliegue
 
+### Opción recomendada (script automatizado)
+
 ```bash
 git clone <repo-url>
 cd Evaluacion3_ProgramacionCD
+
+# Linux/Mac/Git Bash
+chmod +x docker/deploy.sh
+./docker/deploy.sh
+
+# Windows PowerShell
+.\docker\deploy.ps1
+```
+
+Los scripts crean `.env` desde `.env.example` si no existe, levantan el stack y muestran las URLs de servicios.
+
+### Opción manual
+
+```bash
 cp .env.example .env
 docker compose up --build
+```
+
+### Re-ejecutar solo el ETL
+
+```bash
+./docker/deploy.sh --etl-only
+# o
+docker compose run --rm etl
 ```
 
 ## Variables de entorno
@@ -29,6 +53,7 @@ docker compose up --build
 | LOG_LEVEL | Nivel de log | INFO |
 | DATE_START | Inicio del análisis | 2025-06-01 |
 | DATE_END | Fin del análisis | 2026-06-01 |
+| ETL_STRICT_VALIDATION | Abortar carga si falla validación | false |
 
 ## Orden de arranque
 
