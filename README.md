@@ -85,3 +85,12 @@ pytest
 ## Documentación
 
 Ver carpeta [`docs/`](docs/) para manuales técnicos, de usuario, despliegue y diagramas.
+
+## Entregables de evaluación
+
+| Archivo | Descripción |
+|---------|-------------|
+| [`docs/entregables/informe_evaluacion.docx`](docs/entregables/informe_evaluacion.docx) | Informe ejecutivo |
+| [`docs/entregables/presentacion_evaluacion.pptx`](docs/entregables/presentacion_evaluacion.pptx) | Presentación de defensa |
+
+Regenerar con: `python scripts/generate_informe.py` y `python scripts/generate_presentacion.py`
