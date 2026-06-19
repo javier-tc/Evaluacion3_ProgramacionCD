@@ -53,6 +53,28 @@ data_sources → etl → validation → postgresql → fastapi → dash
 
 CO, MP10, MP2.5, NO2, O3
 
+## Notebooks ETL
+
+```bash
+jupyter notebook etl/notebooks/
+```
+
+- `01_exploracion_fuentes.ipynb` — perfilado de CSV y API Open-Meteo
+- `02_pipeline_etl_demo.ipynb` — demo paso a paso del pipeline E-T-V-L
+
+## Despliegue automatizado
+
+```bash
+# Linux/Mac/Git Bash
+./docker/deploy.sh
+
+# Windows PowerShell
+.\docker\deploy.ps1
+
+# Solo re-ejecutar ETL
+./docker/deploy.sh --etl-only
+```
+
 ## Ejecutar tests
 
 ```bash

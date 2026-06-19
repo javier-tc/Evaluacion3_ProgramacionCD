@@ -62,3 +62,14 @@
 ## Logging
 
 Logs estructurados en `logs/etl_YYYY-MM-DD.log` con rotación de 10 MB.
+
+## Notebooks exploratorios
+
+Ubicación: `etl/notebooks/`
+
+| Notebook | Propósito |
+|----------|-----------|
+| `01_exploracion_fuentes.ipynb` | Perfilado de CSV y muestra Open-Meteo |
+| `02_pipeline_etl_demo.ipynb` | Demo E-T-V-L reutilizando módulos de producción |
+
+Variable `NOTEBOOK_LOAD_DB=true` habilita la carga a PostgreSQL en el notebook 02.
