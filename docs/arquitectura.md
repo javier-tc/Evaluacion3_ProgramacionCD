@@ -54,7 +54,7 @@ flowchart TB
 3. **validation**: Pydantic + Great Expectations
 4. **postgresql**: almacenamiento normalizado
 5. **fastapi**: exposición REST
-6. **streamlit/dash**: visualización interactiva (Dash + Plotly)
+6. **dash**: visualización interactiva (Dash + Plotly)
 
 ## Principios
 
