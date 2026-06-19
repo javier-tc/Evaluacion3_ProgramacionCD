@@ -38,6 +38,7 @@ class Settings(BaseSettings):
         "wind_gusts_10m_max,weather_code&current=precipitation,rain"
     )
     station_name: str = "Santiago"
+    etl_strict_validation: bool = False
 
     @property
     def database_url(self) -> str:

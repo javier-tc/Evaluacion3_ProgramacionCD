@@ -85,13 +85,19 @@ def run_pipeline() -> None:
             "missing_values_estimated": raw_pollution_count - len(pollution_df),
             "valid_records": report["pollution"]["pydantic_valid"],
         }
+        validation_ok = report["overall_success"]
         _log_etl_stage(
             run_id, "validate",
-            "success" if report["overall_success"] else "warning",
+            "success" if validation_ok else "warning",
             len(pollution_df),
             duration=time.time() - t_validate,
             metadata=validate_metadata,
         )
+
+        if not validation_ok and settings.etl_strict_validation:
+            raise ValueError(
+                "validacion fallida con ETL_STRICT_VALIDATION=true; carga abortada"
+            )
 
         t_load = time.time()
         total = load_all_data(

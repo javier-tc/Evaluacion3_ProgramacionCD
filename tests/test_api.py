@@ -102,6 +102,16 @@ def test_top_days(mock_get, client):
     assert response.status_code == 200
 
 
+@patch("api.routers.analytics.get_annual_averages")
+def test_annual_averages(mock_get, client):
+    mock_get.return_value = [
+        {"pollutant": "MP25", "year": 2025, "avg_value": 28.5, "unit": "ug/m3"}
+    ]
+    response = client.get("/analytics/annual-averages")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+
+
 @patch("api.routers.analytics.get_etl_status")
 def test_etl_status(mock_get, client):
     mock_get.return_value = {
