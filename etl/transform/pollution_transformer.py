@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -27,11 +28,37 @@ def _coalesce_value(row) -> tuple[float | None, str | None]:
     return None, None
 
 
+def _to_numeric_series(series: pd.Series) -> pd.Series:
+    normalized = series.astype("string").str.replace(",", ".", regex=False)
+    return pd.to_numeric(normalized, errors="coerce")
+
+
+def _coalesce_columns(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+    columns = ["valor_validado", "valor_preliminar", "valor_no_validado"]
+    statuses = ["validated", "preliminary", "non_validated"]
+    numeric = pd.concat([_to_numeric_series(df[col]) for col in columns], axis=1)
+    numeric.columns = columns
+    value = numeric.bfill(axis=1).iloc[:, 0]
+    status = np.select(
+        [numeric[col].notna() for col in columns],
+        statuses,
+        default=None,
+    )
+    return value, pd.Series(status, index=df.index, dtype="object")
+
+
 def _build_timestamp(fecha: int | str, hora: int | str) -> pd.Timestamp:
     fecha_str = str(int(fecha)).zfill(6)
     hora_str = str(int(hora)).zfill(4)
     dt_str = f"20{fecha_str} {hora_str[:2]}:{hora_str[2:]}"
     return pd.to_datetime(dt_str, format="%Y%m%d %H:%M")
+
+
+def _build_timestamps(df: pd.DataFrame) -> pd.Series:
+    fecha = df["fecha"].astype("int64").astype("string").str.zfill(6)
+    hora = df["hora"].astype("int64").astype("string").str.zfill(4)
+    dt_str = "20" + fecha + " " + hora.str[:2] + ":" + hora.str[2:]
+    return pd.to_datetime(dt_str, format="%Y%m%d %H:%M", errors="coerce")
 
 
 def transform_pollution(pollution_dfs: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -42,12 +69,8 @@ def transform_pollution(pollution_dfs: dict[str, pd.DataFrame]) -> tuple[pd.Data
     frames = []
     for pollutant, df in pollution_dfs.items():
         df = df.copy()
-        coalesced = df.apply(_coalesce_value, axis=1, result_type="expand")
-        df["value"] = coalesced[0]
-        df["quality_status"] = coalesced[1]
-        df["measured_at"] = df.apply(
-            lambda r: _build_timestamp(r["fecha"], r["hora"]), axis=1
-        )
+        df["value"], df["quality_status"] = _coalesce_columns(df)
+        df["measured_at"] = _build_timestamps(df)
         df["station_name"] = settings.station_name
         frames.append(df)
 
@@ -90,9 +113,24 @@ def transform_pollution(pollution_dfs: dict[str, pd.DataFrame]) -> tuple[pd.Data
 def compute_correlations(
     pollution_df: pd.DataFrame, weather_df: pd.DataFrame
 ) -> pd.DataFrame:
-    poll_daily = (
+    poll_daily_wide = (
         pollution_df.assign(date=pollution_df["measured_at"].dt.date)
         .pivot_table(index="date", columns="pollutant", values="value", aggfunc="mean")
+        .reset_index()
+    )
+    poll_daily_long = poll_daily_wide.melt(
+        id_vars="date",
+        var_name="pollutant",
+        value_name="daily_avg",
+    ).dropna()
+    poll_daily = (
+        poll_daily_long.pivot_table(
+            index="date",
+            columns="pollutant",
+            values="daily_avg",
+            aggfunc="mean",
+        )
+        .reset_index()
     )
     merged = poll_daily.merge(weather_df, on="date", how="inner")
     numeric = merged.select_dtypes(include="number")

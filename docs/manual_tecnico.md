@@ -4,6 +4,7 @@
 
 - Python 3.12
 - pandas, numpy, SQLAlchemy, Pydantic, Great Expectations
+- scikit-learn, joblib
 - FastAPI, Dash, Plotly
 - PostgreSQL 16, Docker Compose
 - pytest, loguru, tenacity
@@ -18,11 +19,25 @@
 ### Transformación
 
 - Normalización de columnas a snake_case
-- Coalesce de calidad: validados > preliminares > no validados
+- Coalesce vectorizado de calidad: validados > preliminares > no validados
 - Parseo de fechas YYMMDD + HHMM
 - Filtro temporal: 2025-06-01 a 2026-06-01
 - Agregaciones diarias y mensuales
+- Reshape con `pivot_table` y `melt` para correlaciones y dataset ML
+- Join con umbrales de referencia extraídos desde PostgreSQL
 - Cálculo de correlaciones Pearson
+
+### Decisiones de limpieza
+
+| Regla | Justificación | Evidencia |
+|-------|---------------|-----------|
+| Coalesce de valores | Prioriza mediciones validadas y conserva preliminares/no validadas cuando aportan cobertura | `quality_status` indica la fuente usada |
+| Eliminación de nulos en `value` | Evita métricas y modelos con observaciones sin concentración | Reporte de validación y metadata `missing_values_estimated` |
+| Filtro de valores negativos | Las concentraciones negativas no son válidas para el dominio físico | Regla aplicada antes de agregaciones |
+| Filtro temporal | Mantiene el período oficial del proyecto | `DATE_START` y `DATE_END` |
+| Deduplicación por fecha-contaminante | Evita doble conteo en agregaciones | `duplicates_removed` en estado de calidad |
+
+Los reportes JSON de validación se generan en `data/processed/validation_reports/`.
 
 ### Validación
 
@@ -32,7 +47,30 @@
 ### Carga
 
 - SQLAlchemy con transacciones y rollback
+- Inserción por bloques con `CHUNK_SIZE` para grandes volúmenes
 - Registro en `etl_execution_log`
+
+## Modelos supervisados
+
+El módulo `models/` entrena modelos Scikit-learn desde datos consolidados en PostgreSQL.
+
+### Regresión
+
+- Objetivo: predecir promedio diario de MP2.5 (`mp25_avg`)
+- Algoritmos: `LinearRegression`, `RandomForestRegressor`, `GradientBoostingRegressor`
+- Métricas: MAE, RMSE, R² y validación cruzada por MAE
+
+### Clasificación
+
+- Objetivo: clasificar nivel diario de MP2.5 (`normal`, `moderado`, `alerta`)
+- Algoritmos: `LogisticRegression`, `RandomForestClassifier`, `SVC`
+- Métricas: accuracy, F1 macro, matriz de confusión y validación cruzada
+
+### Persistencia
+
+- Artefactos `.joblib`: `data/processed/models/`
+- Métricas: tabla `model_metrics`
+- Entrenamiento manual: `python scripts/run_training.py`
 
 ## Esquema de base de datos
 

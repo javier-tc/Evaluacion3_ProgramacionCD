@@ -13,6 +13,24 @@ def display_pollutant(code: str) -> str:
     return POLLUTANT_LABELS.get(code, code)
 
 
+WEEKDAY_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+
+WEEKDAY_MAP = {
+    0: "Lunes",
+    1: "Martes",
+    2: "Miércoles",
+    3: "Jueves",
+    4: "Viernes",
+    5: "Sábado",
+    6: "Domingo",
+}
+
+
+def assign_weekday(d: date) -> str:
+    ts = pd.Timestamp(d) if not isinstance(d, pd.Timestamp) else d
+    return WEEKDAY_MAP[ts.dayofweek]
+
+
 def assign_season(d: date) -> str:
     month = d.month if isinstance(d, date) else pd.Timestamp(d).month
     if month in (12, 1, 2):
@@ -50,12 +68,3 @@ def build_correlation_matrix(correlations: list) -> pd.DataFrame:
     sub.index = [CORRELATION_LABELS.get(v, v) for v in sub.index]
     sub.columns = [CORRELATION_LABELS.get(v, v) for v in sub.columns]
     return sub
-
-
-def get_correlation_value(correlations: list, var_x: str, var_y: str) -> float | None:
-    for c in correlations:
-        if (c["var_x"] == var_x and c["var_y"] == var_y) or (
-            c["var_x"] == var_y and c["var_y"] == var_x
-        ):
-            return c["correlation"]
-    return None

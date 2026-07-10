@@ -101,6 +101,37 @@ class DataQualityResponse(BaseModel):
     etl_duration_seconds: float | None
 
 
+class ModelMetricResponse(BaseModel):
+    task_type: str
+    model_name: str
+    metric_name: str
+    metric_value: float
+    artifact_path: str
+    trained_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RegressionPredictionRequest(BaseModel):
+    temp_max: float
+    temp_min: float
+    rain_sum: float = 0.0
+    precipitation_sum: float = 0.0
+    precip_hours: float = 0.0
+    precip_prob_max: float = 0.0
+    wind_speed_max: float
+    wind_gusts_max: float = 0.0
+    weather_code: int | None = None
+    month: int = Field(ge=1, le=12)
+
+
+class RegressionPredictionResponse(BaseModel):
+    model_name: str
+    target: str
+    predicted_value: float
+    unit: str = "ug/m3"
+
+
 class PaginatedResponse(BaseModel):
     total: int
     items: list

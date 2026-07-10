@@ -9,6 +9,7 @@ from etl.models import (
     CorrelationMatrix,
     DailyMetric,
     EtlExecutionLog,
+    ModelMetric,
     MonthlyMetric,
     PollutionMeasurement,
     WeatherMeasurement,
@@ -236,3 +237,13 @@ def get_annual_averages(db: Session) -> list[dict]:
         {"pollutant": r.pollutant, "unit": r.unit, "annual_avg": float(r.annual_avg)}
         for r in db.execute(q).all()
     ]
+
+
+def get_model_metrics(db: Session) -> list[ModelMetric]:
+    q = select(ModelMetric).order_by(
+        desc(ModelMetric.trained_at),
+        ModelMetric.task_type,
+        ModelMetric.model_name,
+        ModelMetric.metric_name,
+    )
+    return list(db.scalars(q).all())

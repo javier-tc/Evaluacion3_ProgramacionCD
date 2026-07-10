@@ -82,3 +82,48 @@ Métricas de calidad de datos y última ejecución ETL:
 | etl_records_processed | Registros procesados |
 | etl_errors | Conteo de ejecuciones fallidas |
 | etl_duration_seconds | Duración último pipeline |
+
+### GET /analytics/ml/metrics
+
+Métricas persistidas de los modelos supervisados entrenados con Scikit-learn.
+
+| Campo | Descripción |
+|-------|-------------|
+| task_type | `regression` o `classification` |
+| model_name | Nombre del algoritmo entrenado |
+| metric_name | Métrica evaluada (`mae`, `rmse`, `r2`, `accuracy`, `f1_macro`) |
+| metric_value | Valor numérico de la métrica |
+| artifact_path | Ruta del artefacto `.joblib` |
+| trained_at | Fecha y hora de entrenamiento |
+
+### POST /analytics/ml/predict/regression
+
+Predice el promedio diario de MP2.5 a partir de variables meteorológicas.
+
+**Body:**
+
+```json
+{
+  "temp_max": 22.5,
+  "temp_min": 11.3,
+  "rain_sum": 0.0,
+  "precipitation_sum": 0.0,
+  "precip_hours": 0.0,
+  "precip_prob_max": 10.0,
+  "wind_speed_max": 5.2,
+  "wind_gusts_max": 9.8,
+  "weather_code": 0,
+  "month": 7
+}
+```
+
+**Respuesta:**
+
+```json
+{
+  "model_name": "random_forest_regressor",
+  "target": "mp25_avg",
+  "predicted_value": 31.4,
+  "unit": "ug/m3"
+}
+```

@@ -1,9 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import Input, Output, callback, dcc, html
-
-from dashboards.api_client import get_correlations
-from dashboards.utils.constants import HYPOTHESIS_PAIRS
-from dashboards.utils.transforms import get_correlation_value
+from dash import html
 
 POLLUTANT_INFO = [
     {
@@ -63,8 +59,8 @@ HYPOTHESES = [
         "text": "El viento dispersa contaminantes como CO y NO2.",
     },
     {
-        "title": "Hipótesis 4: Patrones Horarios de Tráfico",
-        "text": "CO y NO2 presentan patrones horarios asociados al tráfico vehicular.",
+        "title": "Hipótesis 4: Patrones Semanales de Tráfico",
+        "text": "CO y NO2 presentan mayor concentración en días laborables que en fin de semana.",
     },
 ]
 
@@ -91,9 +87,6 @@ def layout():
             dbc.AccordionItem(p["body"], title=p["title"])
             for p in POLLUTANT_INFO
         ], start_collapsed=True, className="mb-4"),
-        html.H4("Hallazgos Dinámicos (Correlaciones)", className="mb-3"),
-        dcc.Interval(id="pres-interval", interval=60000, n_intervals=0),
-        html.Div(id="pres-findings", className="mb-4"),
         html.H4("Navegación", className="mb-3"),
         dbc.Row([
             dbc.Col(dbc.Button("Dashboard Ejecutivo", href="/ejecutivo", color="primary", external_link=True), md=3),
@@ -101,30 +94,3 @@ def layout():
             dbc.Col(dbc.Button("Dashboard Operacional", href="/operacional", color="info", external_link=True), md=3),
         ]),
     ], fluid=True)
-
-
-def _finding_badge(label: str, corr: float | None, expected: str) -> dbc.Alert:
-    if corr is None:
-        return dbc.Alert(f"{label}: sin datos", color="secondary")
-    if expected == "positive":
-        ok = corr > 0
-        detail = f"r = {corr:.3f} (esperado: positivo)"
-    else:
-        ok = corr < 0
-        detail = f"r = {corr:.3f} (esperado: negativo)"
-    color = "success" if ok else "warning"
-    status = "Consistente con hipótesis" if ok else "Revisar / no concluyente"
-    return dbc.Alert([html.Strong(label), html.Br(), detail, html.Br(), status], color=color)
-
-
-@callback(Output("pres-findings", "children"), Input("pres-interval", "n_intervals"))
-def update_findings(_):
-    corrs = get_correlations()
-    badges = []
-    for pair in HYPOTHESIS_PAIRS:
-        val = get_correlation_value(corrs, pair["var_x"], pair["var_y"])
-        badges.append(dbc.Col(
-            _finding_badge(pair["label"], val, pair["expected"]),
-            md=4, className="mb-2",
-        ))
-    return dbc.Row(badges)

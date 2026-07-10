@@ -12,6 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from loguru import logger
 
+from etl.extract.db_extractor import (
+    enrich_daily_metrics_with_thresholds,
+    extract_pollution_thresholds,
+)
 from etl.config import get_settings
 from etl.extract.orchestrator import run_extraction
 from etl.load.db_loader import load_all_data
@@ -60,20 +64,24 @@ def run_pipeline() -> None:
 
         t_extract = time.time()
         pollution_dfs, weather_raw, _ = run_extraction()
+        thresholds_df = extract_pollution_thresholds()
         raw_pollution_count = sum(len(d) for d in pollution_dfs.values())
         _log_etl_stage(run_id, "extract", "success",
-                       raw_pollution_count + len(weather_raw),
+                       raw_pollution_count + len(weather_raw) + len(thresholds_df),
                        duration=time.time() - t_extract)
 
         t_transform = time.time()
         pollution_df, daily_df, monthly_df = transform_pollution(pollution_dfs)
         weather_df = transform_weather(weather_raw)
         correlation_df = compute_correlations(pollution_df, weather_df)
+        daily_thresholds_df = enrich_daily_metrics_with_thresholds(daily_df, thresholds_df)
 
         pollution_df.to_parquet(settings.processed_data_dir / "pollution.parquet", index=False)
         weather_df.to_parquet(settings.processed_data_dir / "weather.parquet", index=False)
         daily_df.to_parquet(settings.processed_data_dir / "daily_metrics.parquet", index=False)
+        daily_thresholds_df.to_parquet(settings.processed_data_dir / "daily_metrics_thresholds.parquet", index=False)
         monthly_df.to_parquet(settings.processed_data_dir / "monthly_metrics.parquet", index=False)
+        thresholds_df.to_parquet(settings.processed_data_dir / "pollution_thresholds.parquet", index=False)
         correlation_df.to_parquet(settings.processed_data_dir / "correlations.parquet", index=False)
         _log_etl_stage(run_id, "transform", "success", len(pollution_df),
                        duration=time.time() - t_transform)

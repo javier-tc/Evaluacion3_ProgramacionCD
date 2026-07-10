@@ -10,19 +10,18 @@ from dashboards.api_client import (
     PLOTLY_CONFIG,
     get_correlations,
     get_daily,
-    get_pollution,
     get_weather,
 )
 from dashboards.utils.constants import POLLUTANTS
 from dashboards.utils.transforms import (
+    WEEKDAY_ORDER,
     assign_season,
+    assign_weekday,
     build_correlation_matrix,
     display_pollutant,
     display_unit,
     merge_pollution_weather,
 )
-
-HOURLY_POLLUTANTS = ["CO", "NO2"]
 
 
 def layout():
@@ -34,17 +33,12 @@ def layout():
                 start_date=date(2025, 6, 1),
                 end_date=date(2026, 6, 1),
                 display_format="DD/MM/YYYY",
-            ), md=6),
+            ), md=8),
             dbc.Col(dcc.Dropdown(
                 id="anal-box-pollutant",
                 options=[{"label": display_pollutant(p), "value": p} for p in POLLUTANTS],
                 value="MP25",
-            ), md=3),
-            dbc.Col(dcc.Dropdown(
-                id="anal-hourly-pollutant",
-                options=[{"label": display_pollutant(p), "value": p} for p in HOURLY_POLLUTANTS],
-                value="CO",
-            ), md=3),
+            ), md=4),
         ], className="mb-4"),
         html.H4("Correlaciones", className="mb-3"),
         dbc.Row([
@@ -61,15 +55,15 @@ def layout():
             dbc.Col(dcc.Graph(id="anal-seasonal", config=PLOTLY_CONFIG), md=6),
             dbc.Col(dcc.Graph(id="anal-boxplot", config=PLOTLY_CONFIG), md=6),
         ], className="mt-3"),
-        html.H4("Análisis Horario", className="mt-4 mb-3"),
+        html.H4("Análisis Semanal", className="mt-4 mb-3"),
         dbc.Alert(
-            "Los datos fuente son agregaciones diarias. El análisis horario tiene resolución "
-            "limitada (registro único a las 00:00). La hipótesis de patrones de tráfico debe "
-            "interpretarse con esta restricción.",
-            color="warning",
+            "Con datos diarios se analizan patrones por día de la semana "
+            "(días laborables vs fin de semana). Especialmente relevante para "
+            "CO y NO2, asociados al tráfico vehicular.",
+            color="info",
         ),
         dbc.Row([
-            dbc.Col(dcc.Graph(id="anal-hourly", config=PLOTLY_CONFIG), md=12),
+            dbc.Col(dcc.Graph(id="anal-weekly", config=PLOTLY_CONFIG), md=12),
         ], className="mt-3"),
     ], fluid=True)
 
@@ -98,20 +92,18 @@ def _scatter(merged: pd.DataFrame, x_col: str, y_col: str, x_label: str, y_label
     Output("anal-scatter-rain-mp10", "figure"),
     Output("anal-seasonal", "figure"),
     Output("anal-boxplot", "figure"),
-    Output("anal-hourly", "figure"),
+    Output("anal-weekly", "figure"),
     Input("anal-date-range", "start_date"),
     Input("anal-date-range", "end_date"),
     Input("anal-box-pollutant", "value"),
-    Input("anal-hourly-pollutant", "value"),
 )
-def update_analytical(start_date, end_date, box_pollutant, hourly_pollutant):
+def update_analytical(start_date, end_date, box_pollutant):
     start = date.fromisoformat(start_date) if start_date else None
     end = date.fromisoformat(end_date) if end_date else None
 
     corrs = get_correlations()
     daily = get_daily(None, start, end)
     weather = get_weather(start, end)
-    pollution = get_pollution(None, start, end)
     merged = merge_pollution_weather(daily, weather)
 
     corr_matrix = build_correlation_matrix(corrs)
@@ -158,27 +150,27 @@ def update_analytical(start_date, end_date, box_pollutant, hourly_pollutant):
             title=f"Distribución de {display_pollutant(box_pollutant or '')} (valores reales)",
             labels={"avg_value": f"Concentración ({display_unit(unit)})"},
         )
+
+        df["weekday"] = df["date"].apply(lambda d: assign_weekday(d.date()))
+        weekly = df.groupby(["weekday", "pollutant"])["avg_value"].mean().reset_index()
+        weekly["pollutant_label"] = weekly["pollutant"].map(display_pollutant)
+        fig_weekly = px.bar(
+            weekly,
+            x="weekday",
+            y="avg_value",
+            color="pollutant_label",
+            barmode="group",
+            category_orders={"weekday": WEEKDAY_ORDER},
+            title="Promedio por día de la semana (valores reales)",
+            labels={
+                "avg_value": "Concentración promedio diaria",
+                "weekday": "Día de la semana",
+                "pollutant_label": "Contaminante",
+            },
+        )
     else:
         fig_seasonal = _empty_fig("Sin datos estacionales")
         fig_box = _empty_fig("Sin datos para boxplot")
+        fig_weekly = _empty_fig("Sin datos semanales")
 
-    if pollution and hourly_pollutant:
-        pdf = pd.DataFrame(pollution)
-        pdf = pdf[pdf["pollutant"] == hourly_pollutant]
-        pdf["measured_at"] = pd.to_datetime(pdf["measured_at"])
-        pdf["hour"] = pdf["measured_at"].dt.hour
-        hourly = pdf.groupby("hour")["value"].mean().reset_index()
-        unit = pdf["unit"].iloc[0] if not pdf.empty else ""
-        fig_hourly = px.line(
-            hourly, x="hour", y="value", markers=True,
-            title=f"Promedio horario de {display_pollutant(hourly_pollutant)}",
-            labels={
-                "hour": "Hora del día",
-                "value": f"Concentración ({display_unit(unit)})",
-            },
-        )
-        fig_hourly.update_xaxes(dtick=1, range=[0, 23])
-    else:
-        fig_hourly = _empty_fig("Sin datos horarios")
-
-    return fig_corr, fig_temp_o3, fig_wind_mp25, fig_rain_mp10, fig_seasonal, fig_box, fig_hourly
+    return fig_corr, fig_temp_o3, fig_wind_mp25, fig_rain_mp10, fig_seasonal, fig_box, fig_weekly
