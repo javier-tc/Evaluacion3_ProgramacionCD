@@ -11,6 +11,7 @@ flowchart TB
         CSV_NO2[CSV NO2]
         CSV_O3[CSV O3]
         API_OM[Open-Meteo ERA5]
+        DB_REF[(BBDD umbrales)]
     end
 
     subgraph etl_layer [Capa ETL]
@@ -27,6 +28,7 @@ flowchart TB
     end
 
     subgraph services [Servicios]
+        ML[Scikit-learn]
         API[FastAPI]
         DASH[Dash + Plotly]
     end
@@ -37,24 +39,28 @@ flowchart TB
     CSV_NO2 --> EX
     CSV_O3 --> EX
     API_OM --> EX
+    DB_REF --> EX
     EX --> RAW
     RAW --> TR
     TR --> PROC
     PROC --> VAL
     VAL --> LD
     LD --> PG
+    PG --> ML
+    ML --> PG
     PG --> API
     API --> DASH
 ```
 
 ## Capas
 
-1. **data_sources**: CSV y API meteorológica
+1. **data_sources**: CSV, API meteorológica y referencias desde BBDD
 2. **etl**: extracción, transformación, validación y carga
 3. **validation**: Pydantic + Great Expectations
 4. **postgresql**: almacenamiento normalizado
-5. **fastapi**: exposición REST
-6. **streamlit/dash**: visualización interactiva (Dash + Plotly)
+5. **models**: entrenamiento supervisado con Scikit-learn y persistencia de métricas
+6. **fastapi**: exposición REST
+7. **dash**: visualización interactiva con Dash + Plotly
 
 ## Principios
 

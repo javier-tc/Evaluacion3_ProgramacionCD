@@ -7,10 +7,11 @@
 
 ## Orden sugerido para presentación
 
-1. **Presentación** — pregunta de investigación, hipótesis y hallazgos
+1. **Presentación** — pregunta de investigación, hipótesis y resumen de contaminantes
 2. **Ejecutivo** — KPIs y tendencias
 3. **Analítico** — evidencia estadística
-4. **Operacional** — calidad del pipeline
+4. **ML** — comparación de modelos supervisados
+5. **Operacional** — calidad del pipeline
 
 ## Vista Presentación
 
@@ -19,7 +20,6 @@ Orientada a autoridad ambiental o municipalidad:
 - Pregunta de investigación sobre clima y calidad del aire
 - Cuatro hipótesis de trabajo
 - Resumen por contaminante (CO, MP2.5, MP10, NO2, O3)
-- Hallazgos dinámicos según correlaciones observadas
 - Enlaces a las demás vistas
 
 ## Dashboard Ejecutivo
@@ -39,11 +39,18 @@ Orientada a autoridad ambiental o municipalidad:
 - Scatter plots: Temperatura vs O3, Viento vs MP2.5, Lluvia vs MP10
 - Promedio por estación del año (Verano, Otoño, Invierno, Primavera)
 - Boxplot por contaminante seleccionado (valores reales)
-- Análisis horario de CO y NO2
+- Análisis semanal por día de la semana (patrones laborables vs fin de semana)
 
-### Limitación de datos horarios
+Los datos fuente son agregaciones diarias; el análisis semanal permite evaluar patrones de tráfico sin forzar una resolución horaria inexistente.
 
-Los datos fuente son **agregaciones diarias** (hora 00:00). El gráfico horario muestra la resolución disponible; la hipótesis de patrones de tráfico debe interpretarse con esta restricción.
+## Dashboard ML
+
+- Tabla de métricas por modelo entrenado
+- Comparación visual de MAE, R², accuracy y F1 macro
+- Identificación del mejor modelo de regresión para MP2.5
+- Identificación del mejor modelo de clasificación de alerta
+
+Si la vista aparece sin datos, ejecutar `python scripts/run_training.py` o levantar el sistema con `docker compose up --build`.
 
 ## Dashboard Operacional
 
@@ -65,3 +72,4 @@ Cada gráfico incluye la barra de herramientas Plotly. Usar el icono de cámara 
 - ¿El viento dispersa CO y NO2?
 - ¿Existen patrones estacionales?
 - ¿Qué contaminantes correlacionan entre sí y con el clima?
+- ¿Qué tan bien predicen los modelos el MP2.5 y sus niveles de alerta?

@@ -36,11 +36,3 @@ CORRELATION_LABELS = {
     "rain_sum": "Lluvia",
     "wind_speed_max": "Viento",
 }
-
-HYPOTHESIS_PAIRS = [
-    {"var_x": "temp_max", "var_y": "O3", "expected": "positive", "label": "Temperatura ↔ O3"},
-    {"var_x": "rain_sum", "var_y": "MP25", "expected": "negative", "label": "Lluvia ↔ MP2.5"},
-    {"var_x": "rain_sum", "var_y": "MP10", "expected": "negative", "label": "Lluvia ↔ MP10"},
-    {"var_x": "wind_speed_max", "var_y": "CO", "expected": "negative", "label": "Viento ↔ CO"},
-    {"var_x": "wind_speed_max", "var_y": "NO2", "expected": "negative", "label": "Viento ↔ NO2"},
-]

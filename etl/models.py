@@ -86,6 +86,38 @@ class CorrelationMatrix(Base):
     computed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
+class PollutionThreshold(Base):
+    __tablename__ = "pollution_thresholds"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    pollutant: Mapped[str] = mapped_column(String(10), nullable=False)
+    level: Mapped[str] = mapped_column(String(30), nullable=False)
+    threshold_value: Mapped[float] = mapped_column(Float, nullable=False)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False)
+    source: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    __table_args__ = (
+        Index("ix_threshold_pollutant_level", "pollutant", "level", unique=True),
+    )
+
+
+class ModelMetric(Base):
+    __tablename__ = "model_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    task_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    metric_value: Mapped[float] = mapped_column(Float, nullable=False)
+    artifact_path: Mapped[str] = mapped_column(Text, nullable=False)
+    details: Mapped[str | None] = mapped_column(Text)
+    trained_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    __table_args__ = (
+        Index("ix_model_metric_task", "task_type", "model_name"),
+    )
+
+
 class EtlExecutionLog(Base):
     __tablename__ = "etl_execution_log"
 

@@ -38,6 +38,26 @@ services:
       - air_quality_net
     restart: "no"
 
+  train:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.etl
+    container_name: airquality_train
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+    command: ["python", "scripts/run_training.py"]
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      etl:
+        condition: service_completed_successfully
+    networks:
+      - air_quality_net
+    restart: "no"
+
   api:
     build:
       context: .
@@ -50,9 +70,10 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
+      - ./data:/app/data
       - ./logs:/app/logs
     depends_on:
-      etl:
+      train:
         condition: service_completed_successfully
     networks:
       - air_quality_net

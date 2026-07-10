@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import analytics, health, pollution, weather
+from api.routers import analytics, health, ml, pollution, weather
 from etl.config import get_settings
 
 settings = get_settings()
@@ -26,6 +26,7 @@ app.include_router(health.router)
 app.include_router(pollution.router)
 app.include_router(weather.router)
 app.include_router(analytics.router)
+app.include_router(ml.router)
 
 
 @app.get("/")

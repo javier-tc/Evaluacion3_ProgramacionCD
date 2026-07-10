@@ -4,7 +4,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, callback, dcc, html
 
-from dashboards.pages import analytical, executive, operational, presentation
+from dashboards.pages import analytical, executive, ml, operational, presentation
 
 app = dash.Dash(
     __name__,
@@ -18,6 +18,7 @@ navbar = dbc.NavbarSimple(
         dbc.NavItem(dbc.NavLink("Presentación", href="/presentacion", active="exact")),
         dbc.NavItem(dbc.NavLink("Ejecutivo", href="/ejecutivo", active="exact")),
         dbc.NavItem(dbc.NavLink("Analítico", href="/analitico", active="exact")),
+        dbc.NavItem(dbc.NavLink("ML", href="/ml", active="exact")),
         dbc.NavItem(dbc.NavLink("Operacional", href="/operacional", active="exact")),
     ],
     brand="Monitoreo Calidad del Aire - Santiago",
@@ -41,6 +42,8 @@ def display_page(pathname):
         return executive.layout()
     if pathname == "/analitico":
         return analytical.layout()
+    if pathname == "/ml":
+        return ml.layout()
     if pathname == "/operacional":
         return operational.layout()
     return presentation.layout()

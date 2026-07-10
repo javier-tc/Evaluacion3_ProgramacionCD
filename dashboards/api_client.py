@@ -92,3 +92,8 @@ def get_etl_status() -> dict:
 def get_data_quality() -> dict:
     result = _get("/analytics/data-quality")
     return result if isinstance(result, dict) else {}
+
+
+def get_model_metrics() -> list:
+    result = _get("/analytics/ml/metrics")
+    return result if isinstance(result, list) else []

@@ -1,6 +1,6 @@
 # Sistema de Monitoreo y Análisis de Calidad del Aire en Santiago
 
-Solución completa de Ciencia de Datos que integra datos ambientales y meteorológicos mediante un pipeline ETL automatizado, almacenamiento en PostgreSQL, API REST y dashboards interactivos Dash + Plotly.
+Solución completa de Ciencia de Datos que integra datos ambientales y meteorológicos mediante un pipeline ETL automatizado, modelos supervisados con Scikit-learn, almacenamiento en PostgreSQL, API REST y dashboards interactivos Dash + Plotly.
 
 ## Integrantes
 
@@ -29,6 +29,7 @@ Servicios disponibles:
 
 ```
 data_sources → etl → validation → postgresql → fastapi → dash
+                              ↘ models sklearn ↗
 ```
 
 ## Estructura del proyecto
@@ -40,6 +41,7 @@ data_sources → etl → validation → postgresql → fastapi → dash
 ├── docker/           # Dockerfiles
 ├── docs/             # Documentación completa
 ├── etl/              # Pipeline ETL
+├── models/           # Entrenamiento, evaluación y registro ML
 ├── scripts/          # Scripts de migración y ETL
 ├── tests/            # Pruebas automatizadas
 └── repo/             # Ejemplos Git Flow
@@ -59,6 +61,24 @@ CO, MP10, MP2.5, NO2, O3
 pip install -r requirements.txt
 pytest
 ```
+
+## Entrenar modelos
+
+Después de ejecutar el ETL y tener PostgreSQL poblado:
+
+```bash
+python scripts/run_training.py
+```
+
+El entrenamiento genera artefactos en `data/processed/models/`, guarda métricas en PostgreSQL y habilita los endpoints `/analytics/ml/metrics` y `/analytics/ml/predict/regression`.
+
+Con Docker Compose el flujo queda automatizado:
+
+```bash
+docker compose up --build
+```
+
+Orden de servicios: PostgreSQL → ETL → entrenamiento ML → API → dashboard.
 
 ## Documentación
 

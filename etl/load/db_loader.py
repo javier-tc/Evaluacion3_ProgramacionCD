@@ -18,6 +18,11 @@ from etl.models import (
 CHUNK_SIZE = 1000
 
 
+def _bulk_insert(session, model, records: list[dict]) -> None:
+    for start in range(0, len(records), CHUNK_SIZE):
+        session.bulk_insert_mappings(model, records[start:start + CHUNK_SIZE])
+
+
 def _log_stage(session, run_id: str, stage: str, status: str,
                records: int = 0, error: str | None = None,
                started: datetime | None = None, duration: float | None = None):
@@ -43,7 +48,6 @@ def load_all_data(
     correlation_df: pd.DataFrame,
     run_id: str,
 ) -> int:
-    engine = get_engine()
     Session = get_session_factory()
     total_records = 0
     started = datetime.now()
@@ -58,61 +62,62 @@ def load_all_data(
             session.execute(delete(MonthlyMetric))
             session.execute(delete(CorrelationMatrix))
 
-            for _, row in pollution_df.iterrows():
-                session.add(PollutionMeasurement(
-                    measured_at=row["measured_at"],
-                    pollutant=row["pollutant"],
-                    value=float(row["value"]),
-                    unit=row["unit"],
-                    quality_status=row["quality_status"],
-                    station_name=row["station_name"],
-                ))
+            pollution_records = [{
+                "measured_at": row["measured_at"],
+                "pollutant": row["pollutant"],
+                "value": float(row["value"]),
+                "unit": row["unit"],
+                "quality_status": row["quality_status"],
+                "station_name": row["station_name"],
+            } for row in pollution_df.to_dict("records")]
+            _bulk_insert(session, PollutionMeasurement, pollution_records)
             total_records += len(pollution_df)
 
-            for _, row in weather_df.iterrows():
+            weather_records = []
+            for row in weather_df.to_dict("records"):
                 wc = row.get("weather_code")
-                session.add(WeatherMeasurement(
-                    date=row["date"],
-                    temp_max=row.get("temp_max"),
-                    temp_min=row.get("temp_min"),
-                    rain_sum=row.get("rain_sum"),
-                    precipitation_sum=row.get("precipitation_sum"),
-                    precip_hours=row.get("precip_hours"),
-                    precip_prob_max=row.get("precip_prob_max"),
-                    wind_speed_max=row.get("wind_speed_max"),
-                    wind_gusts_max=row.get("wind_gusts_max"),
-                    weather_code=int(wc) if pd.notna(wc) else None,
-                ))
+                weather_records.append({
+                    "date": row["date"],
+                    "temp_max": row.get("temp_max"),
+                    "temp_min": row.get("temp_min"),
+                    "rain_sum": row.get("rain_sum"),
+                    "precipitation_sum": row.get("precipitation_sum"),
+                    "precip_hours": row.get("precip_hours"),
+                    "precip_prob_max": row.get("precip_prob_max"),
+                    "wind_speed_max": row.get("wind_speed_max"),
+                    "wind_gusts_max": row.get("wind_gusts_max"),
+                    "weather_code": int(wc) if pd.notna(wc) else None,
+                })
+            _bulk_insert(session, WeatherMeasurement, weather_records)
             total_records += len(weather_df)
 
-            for _, row in daily_df.iterrows():
-                session.add(DailyMetric(
-                    date=row["date"],
-                    pollutant=row["pollutant"],
-                    avg_value=float(row["avg_value"]),
-                    max_value=float(row["max_value"]),
-                    unit=row["unit"],
-                ))
+            daily_records = [{
+                "date": row["date"],
+                "pollutant": row["pollutant"],
+                "avg_value": float(row["avg_value"]),
+                "max_value": float(row["max_value"]),
+                "unit": row["unit"],
+            } for row in daily_df.to_dict("records")]
+            _bulk_insert(session, DailyMetric, daily_records)
 
-            for _, row in monthly_df.iterrows():
-                session.add(MonthlyMetric(
-                    year_month=row["year_month"],
-                    pollutant=row["pollutant"],
-                    avg_value=float(row["avg_value"]),
-                    max_value=float(row["max_value"]),
-                    unit=row["unit"],
-                ))
+            monthly_records = [{
+                "year_month": row["year_month"],
+                "pollutant": row["pollutant"],
+                "avg_value": float(row["avg_value"]),
+                "max_value": float(row["max_value"]),
+                "unit": row["unit"],
+            } for row in monthly_df.to_dict("records")]
+            _bulk_insert(session, MonthlyMetric, monthly_records)
 
             computed_at = datetime.now()
-            for _, row in correlation_df.iterrows():
-                if pd.notna(row["correlation"]):
-                    session.add(CorrelationMatrix(
-                        var_x=row["var_x"],
-                        var_y=row["var_y"],
-                        correlation=float(row["correlation"]),
-                        method=row.get("method", "pearson"),
-                        computed_at=computed_at,
-                    ))
+            correlation_records = [{
+                "var_x": row["var_x"],
+                "var_y": row["var_y"],
+                "correlation": float(row["correlation"]),
+                "method": row.get("method", "pearson"),
+                "computed_at": computed_at,
+            } for row in correlation_df.to_dict("records") if pd.notna(row["correlation"])]
+            _bulk_insert(session, CorrelationMatrix, correlation_records)
 
             duration = (datetime.now() - started).total_seconds()
             _log_stage(session, run_id, "load", "success", total_records,

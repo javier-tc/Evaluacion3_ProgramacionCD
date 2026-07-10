@@ -60,6 +60,39 @@ CREATE TABLE IF NOT EXISTS correlation_matrix (
     computed_at TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS pollution_thresholds (
+    id SERIAL PRIMARY KEY,
+    pollutant VARCHAR(10) NOT NULL,
+    level VARCHAR(30) NOT NULL,
+    threshold_value DOUBLE PRECISION NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    UNIQUE (pollutant, level)
+);
+
+CREATE INDEX IF NOT EXISTS ix_threshold_pollutant_level ON pollution_thresholds (pollutant, level);
+
+INSERT INTO pollution_thresholds (pollutant, level, threshold_value, unit, source)
+VALUES
+    ('MP25', 'normal', 25.0, 'ug/m3', 'referencia operacional proyecto'),
+    ('MP25', 'moderado', 50.0, 'ug/m3', 'referencia operacional proyecto'),
+    ('MP10', 'normal', 50.0, 'ug/m3', 'referencia operacional proyecto'),
+    ('MP10', 'moderado', 150.0, 'ug/m3', 'referencia operacional proyecto')
+ON CONFLICT (pollutant, level) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS model_metrics (
+    id SERIAL PRIMARY KEY,
+    task_type VARCHAR(30) NOT NULL,
+    model_name VARCHAR(80) NOT NULL,
+    metric_name VARCHAR(50) NOT NULL,
+    metric_value DOUBLE PRECISION NOT NULL,
+    artifact_path TEXT NOT NULL,
+    details TEXT,
+    trained_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_model_metric_task ON model_metrics (task_type, model_name);
+
 CREATE TABLE IF NOT EXISTS etl_execution_log (
     id SERIAL PRIMARY KEY,
     run_id VARCHAR(50) NOT NULL,
